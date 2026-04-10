@@ -3,15 +3,11 @@ pipeline {
 
     stages {
 
-        stage('Clone Code') {
-            steps {
-                git 'https://github.com/kjrashmi20/-CI-CD-Automation-with-Docker-and-Kubernetes.git'
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t prt-app .'
+                sh '''
+                docker build -t prt-app .
+                '''
             }
         }
 
@@ -22,6 +18,16 @@ pipeline {
                 docker run -d -p 8081:80 --name prt-container prt-app
                 '''
             }
+        }
+
+    }
+
+    post {
+        success {
+            echo 'CI/CD Pipeline executed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check logs.'
         }
     }
 }
