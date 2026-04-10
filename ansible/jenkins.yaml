@@ -1,0 +1,51 @@
+---
+- name: Install Jenkins using shell commands from manual steps
+  hosts: ci-master
+  become: yes
+  tasks:
+    - name: Update apt repositories and install OpenJDK 21 dependency
+      ansible.builtin.apt:
+        name:
+          - fontconfig
+          - openjdk-21-jre
+        state: present
+        update_cache: yes
+
+    - name: Ensure the apt keyrings directory exists
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Add Jenkins repository key and define sources list via shell commands
+      ansible.builtin.shell: |
+        sudo wget -O/etc/apt/keyrings/jenkins-keyring.asc https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+        echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
+        https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+        /etc/apt/sources.list.d/jenkins.list > /dev/null
+      args:
+        creates: /etc/apt/sources.list.d/jenkins.list
+
+    - name: Update apt cache again after adding the new repo
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install Jenkins
+      ansible.builtin.apt:
+        name: jenkins
+        state: present
+
+    - name: Start and enable Jenkins service
+      ansible.builtin.systemd_service:
+        name: jenkins
+        state: started
+        enabled: yes
+
+    - name: Display the initial admin password
+      ansible.builtin.command: cat /var/lib/jenkins/secrets/initialAdminPassword
+      register: admin_password
+      changed_when: false
+
+    - name: Print the password to terminal
+      ansible.builtin.debug:
+        msg: "The initial admin password is: {{ admin_password.stdout }}"
